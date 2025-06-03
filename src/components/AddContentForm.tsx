@@ -27,6 +27,8 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
   const [urlInput, setUrlInput] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [wantScreenshot, setWantScreenshot] = useState(true);
+  const [screenshotError, setScreenshotError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     type: 'article' as ContentType,
@@ -52,6 +54,8 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
     setStep('url');
     setUrlInput('');
     setExtractionError(null);
+    setWantScreenshot(true);
+    setScreenshotError(null);
     setFormData({
       type: 'article' as ContentType,
       url: '',
@@ -69,6 +73,7 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
     
     setIsExtracting(true);
     setExtractionError(null);
+    setScreenshotError(null);
     
     try {
       const response = await fetch('/api/extract-metadata', {
@@ -76,12 +81,43 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: urlInput.trim() }),
+        body: JSON.stringify({ 
+          url: urlInput.trim(),
+          generateScreenshot: wantScreenshot // Pass the screenshot preference
+        }),
       });
       
       const result: MetadataResponse = await response.json();
       
       if (result.success && result.data) {
+        let thumbnailUrl = result.data.thumbnailUrl || '';
+        
+        // If user wanted a screenshot but didn't get one for an article, try to generate one separately
+        if (wantScreenshot && result.data.type === 'article' && !thumbnailUrl) {
+          try {
+            const screenshotResponse = await fetch('/api/generate-screenshot', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ url: urlInput.trim() }),
+            });
+            
+            if (screenshotResponse.ok) {
+              const screenshotData = await screenshotResponse.json();
+              if (screenshotData.success && screenshotData.screenshotPath) {
+                thumbnailUrl = screenshotData.screenshotPath;
+              } else {
+                setScreenshotError('Failed to generate screenshot, but you can still proceed.');
+              }
+            } else {
+              setScreenshotError('Screenshot service unavailable, but you can still proceed.');
+            }
+          } catch (error) {
+            setScreenshotError('Failed to generate screenshot, but you can still proceed.');
+          }
+        }
+
         const newFormData = {
           type: result.data.type as ContentType,
           url: urlInput.trim(),
@@ -90,7 +126,7 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
           author: result.data.author || '',
           duration: result.data.duration || '',
           location: '',
-          thumbnail: result.data.thumbnailUrl || '',
+          thumbnail: thumbnailUrl,
         };
         setFormData(newFormData);
         setStep('form');
@@ -122,6 +158,11 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
   const handleManualEntry = () => {
     setFormData(prev => ({ ...prev, url: urlInput.trim() }));
     setStep('form');
+  };
+
+  const removeScreenshot = () => {
+    setFormData(prev => ({ ...prev, thumbnail: '' }));
+    setScreenshotError(null);
   };
 
   if (!isOpen) return null;
@@ -164,6 +205,20 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
                   autoFocus
                 />
+              </div>
+
+              {/* Screenshot checkbox */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="wantScreenshot"
+                  checked={wantScreenshot}
+                  onChange={(e) => setWantScreenshot(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <label htmlFor="wantScreenshot" className="text-sm font-medium text-gray-700">
+                  Generate screenshot for articles
+                </label>
               </div>
 
               {extractionError && (
@@ -306,6 +361,48 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
                 />
               </div>
+
+              {/* Screenshot preview section */}
+              {(formData.thumbnail || screenshotError) && (
+                <div className="border-t pt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Screenshot Preview
+                  </label>
+                  
+                  {formData.thumbnail && (
+                    <div className="relative inline-block">
+                      <img 
+                        src={formData.thumbnail} 
+                        alt="Screenshot preview"
+                        className="w-full max-w-xs h-32 object-cover rounded-md border border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeScreenshot}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors"
+                        title="Remove screenshot"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  
+                  {screenshotError && !formData.thumbnail && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-yellow-800">{screenshotError}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4">
                 <button
