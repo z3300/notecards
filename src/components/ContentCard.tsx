@@ -206,17 +206,18 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
         {/* Front of card */}
         <div className="absolute inset-0 backface-hidden">
           <div className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200 h-full relative flex flex-col">
-            {/* Color dot indicator */}
-            <div className={`absolute top-3 right-3 ${CARD_SIZES.dotSize} rounded-full ${getTypeColor(content.type)} z-10`}></div>
-            
+            {/* Color dot indicator */}            
             {getEmbedContent()}
             
             <div className={`${CARD_SIZES.padding} flex flex-col flex-1`}>
               {/* Top section with title and type */}
               <div className="flex-1">
-                <h3 className={`font-medium text-gray-900 ${CARD_SIZES.titleText} ${CARD_SIZES.titleMargin} line-clamp-2 leading-snug`}>
-                  {content.title}
-                </h3>
+                <div className="flex items-center justify-between w-full">
+                  <h3 className={`font-medium text-gray-900 ${CARD_SIZES.titleText} ${CARD_SIZES.titleMargin} line-clamp-2 leading-snug`}>
+                    {content.title}
+                  </h3>
+                  <div className={`${CARD_SIZES.dotSize} rounded-full ${getTypeColor(content.type)} ml-2 flex-shrink-0`}></div>
+                </div>
                 <div className={`flex items-center justify-between ${CARD_SIZES.metaText} text-gray-500 mb-4`}>
                   <span className="capitalize">{content.type}</span>
                   {content.duration && <span>{content.duration}</span>}
@@ -272,7 +273,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
             </div>
             
             <div className="absolute bottom-4 right-4">
-              <span className={`${CARD_SIZES.metaText} text-gray-500`}>Click to flip back</span>
+              {/* <span className={`${CARD_SIZES.metaText} text-gray-500`}>Click to flip back</span> */}
             </div>
           </div>
         </div>
