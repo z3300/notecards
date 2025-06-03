@@ -45,10 +45,10 @@ export interface ContentItem {
   title: string;
   note: string;
   createdAt: Date;
-  thumbnail?: string;
-  author?: string;
-  duration?: string;
-  location?: string;
+  thumbnail?: string | null;
+  author?: string | null;
+  duration?: string | null;
+  location?: string | null;
 }
 
 interface ContentCardProps {

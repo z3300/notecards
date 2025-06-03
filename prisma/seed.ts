@@ -1,6 +1,8 @@
-import { ContentItem } from '@/components/ContentCard';
+const { PrismaClient } = require('@prisma/client');
 
-export const mockContent: ContentItem[] = [
+const prisma = new PrismaClient();
+
+const mockContent = [
   {
     id: '1',
     type: 'youtube',
@@ -9,8 +11,9 @@ export const mockContent: ContentItem[] = [
     note: 'Classic example of internet culture. Great for understanding viral phenomena and how certain content becomes culturally significant.',
     duration: '3:33',
     author: 'Rick Astley',
-    createdAt: new Date('2024-01-15T10:30:00'),
-    location: 'Home Office'
+    createdAt: '2024-01-15T10:30:00.000Z',
+    location: 'Home Office',
+    thumbnail: null
   },
   {
     id: '2',
@@ -19,8 +22,9 @@ export const mockContent: ContentItem[] = [
     title: 'The Future of Web Development: Trends to Watch in 2024',
     note: 'Key insights: Server Components, Edge Computing, and AI-powered development tools are reshaping how we build web applications.',
     author: 'Tech Weekly',
-    createdAt: new Date('2024-02-22T14:15:00'),
-    location: 'Coffee Shop'
+    createdAt: '2024-02-22T14:15:00.000Z',
+    location: 'Coffee Shop',
+    thumbnail: null
   },
   {
     id: '3',
@@ -29,7 +33,8 @@ export const mockContent: ContentItem[] = [
     title: 'TIL: You can use CSS Grid for complex layouts without JavaScript',
     note: 'Reminded me to explore CSS Grid more deeply. The examples shown were particularly useful for responsive design patterns.',
     author: 'dev_enthusiast',
-    createdAt: new Date('2024-03-08T09:45:00')
+    createdAt: '2024-03-08T09:45:00.000Z',
+    thumbnail: null
   },
   {
     id: '4',
@@ -39,8 +44,9 @@ export const mockContent: ContentItem[] = [
     note: 'Perfect quick refresher on React fundamentals. Bookmarked for when I need to explain React to beginners.',
     duration: '2:14',
     author: 'Fireship',
-    createdAt: new Date('2024-03-20T16:22:00'),
-    location: 'Library'
+    createdAt: '2024-03-20T16:22:00.000Z',
+    location: 'Library',
+    thumbnail: null
   },
   {
     id: '5',
@@ -49,7 +55,8 @@ export const mockContent: ContentItem[] = [
     title: 'Thread on the importance of semantic HTML',
     note: 'Excellent thread about accessibility and SEO benefits. Contains practical examples I want to implement in future projects.',
     author: 'damnGruz',
-    createdAt: new Date('2024-04-12T11:18:00')
+    createdAt: '2024-04-12T11:18:00.000Z',
+    thumbnail: null
   },
   {
     id: '6',
@@ -58,8 +65,9 @@ export const mockContent: ContentItem[] = [
     title: 'Building Scalable Design Systems with Tailwind CSS',
     note: 'Comprehensive guide on creating consistent design systems. The component library approach is exactly what our team needs.',
     author: 'Design Systems Weekly',
-    createdAt: new Date('2024-05-03T13:40:00'),
-    location: 'Co-working Space'
+    createdAt: '2024-05-03T13:40:00.000Z',
+    location: 'Co-working Space',
+    thumbnail: null
   },
   {
     id: '7',
@@ -68,7 +76,8 @@ export const mockContent: ContentItem[] = [
     title: 'What are some underrated developer tools that changed your workflow?',
     note: 'Great discussion with tool recommendations. Need to try out the terminal multiplexer and code snippet manager mentioned.',
     author: 'productive_dev',
-    createdAt: new Date('2024-06-17T08:25:00')
+    createdAt: '2024-06-17T08:25:00.000Z',
+    thumbnail: null
   },
   {
     id: '8',
@@ -78,8 +87,9 @@ export const mockContent: ContentItem[] = [
     note: 'Mind-blowing techniques for type safety. The conditional types section will help me refactor our API layer.',
     duration: '28:45',
     author: 'TypeScript Weekly',
-    createdAt: new Date('2024-07-29T19:12:00'),
-    location: 'Home'
+    createdAt: '2024-07-29T19:12:00.000Z',
+    location: 'Home',
+    thumbnail: null
   },
   {
     id: '9',
@@ -88,8 +98,9 @@ export const mockContent: ContentItem[] = [
     title: 'The psychology of user experience design',
     note: 'Fascinating insights into user behavior and decision-making. Will apply these principles to our onboarding flow.',
     author: 'dan_abramov',
-    createdAt: new Date('2024-08-14T15:07:00'),
-    location: 'Airport'
+    createdAt: '2024-08-14T15:07:00.000Z',
+    location: 'Airport',
+    thumbnail: null
   },
   {
     id: '10',
@@ -98,8 +109,9 @@ export const mockContent: ContentItem[] = [
     title: 'The Killers - Mr. Brightside',
     note: 'Iconic rock track with a timeless riff that always pumps me up.',
     author: 'The Killers',
-    createdAt: new Date('2024-09-01T12:00:00'),
-    location: 'Gym'
+    createdAt: '2024-09-01T12:00:00.000Z',
+    location: 'Gym',
+    thumbnail: null
   },
   {
     id: '11',
@@ -108,7 +120,39 @@ export const mockContent: ContentItem[] = [
     title: 'Forss - Flickermood',
     note: 'Atmospheric track with chill vibes, great for focusing.',
     author: 'Forss',
-    createdAt: new Date('2024-09-02T12:00:00'),
-    location: 'Studio'
+    createdAt: '2024-09-02T12:00:00.000Z',
+    location: 'Studio',
+    thumbnail: null
   }
-]; 
+];
+
+async function main() {
+  console.log('Seeding database...');
+  for (const item of mockContent) {
+    await prisma.contentItem.create({
+      data: {
+        id: item.id,
+        type: item.type,
+        url: item.url,
+        title: item.title,
+        note: item.note,
+        createdAt: new Date(item.createdAt),
+        thumbnail: item.thumbnail,
+        author: item.author ?? null,
+        duration: item.duration ?? null,
+        location: item.location ?? null,
+      },
+    });
+  }
+  console.log('Seeding completed.');
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  }); 

@@ -6,13 +6,24 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "prisma db seed"
   },
   "dependencies": {
+    "@prisma/client": "^6.8.2",
+    "@tanstack/react-query": "^5.79.2",
+    "@trpc/client": "^11.2.0",
+    "@trpc/next": "^11.2.0",
+    "@trpc/react-query": "^11.2.0",
+    "@trpc/server": "^11.2.0",
+    "cheerio": "^1.0.0",
     "framer-motion": "^12.15.0",
     "next": "15.3.3",
+    "node-html-parser": "^7.0.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "superjson": "^2.2.2",
+    "zod": "^3.25.49"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -22,7 +33,12 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
+    "prisma": "^6.8.2",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   }
 }
