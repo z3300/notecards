@@ -232,6 +232,11 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
                     day: 'numeric', 
                     year: 'numeric' 
                   })}</div>
+                  <div className="text-gray-500 mt-1 font-normal">{content.createdAt.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  })}</div>
                   {content.location && (
                     <div className="text-gray-400 mt-1 font-normal">📍 {content.location}</div>
                   )}
