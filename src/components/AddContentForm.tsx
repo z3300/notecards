@@ -36,6 +36,7 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
     author: '',
     duration: '',
     location: '',
+    thumbnail: '',
   });
 
   const utils = trpc.useUtils();
@@ -59,6 +60,7 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
       author: '',
       duration: '',
       location: '',
+      thumbnail: '',
     });
   };
 
@@ -80,7 +82,7 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
       const result: MetadataResponse = await response.json();
       
       if (result.success && result.data) {
-        setFormData({
+        const newFormData = {
           type: result.data.type as ContentType,
           url: urlInput.trim(),
           title: result.data.title,
@@ -88,7 +90,9 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
           author: result.data.author || '',
           duration: result.data.duration || '',
           location: '',
-        });
+          thumbnail: result.data.thumbnailUrl || '',
+        };
+        setFormData(newFormData);
         setStep('form');
       } else {
         setExtractionError(result.error || 'Failed to extract metadata');
@@ -111,6 +115,7 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
       author: formData.author || undefined,
       duration: formData.duration || undefined,
       location: formData.location || undefined,
+      thumbnail: formData.thumbnail || undefined,
     });
   };
 

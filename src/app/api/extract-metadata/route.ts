@@ -160,11 +160,37 @@ async function extractGenericMetadata(url: string): Promise<any> {
     if (url.includes('spotify.com')) type = 'spotify';
     else if (url.includes('soundcloud.com')) type = 'soundcloud';
     
+    let thumbnailUrl = $('meta[property="og:image"]').attr('content');
+    
+    // Generate screenshot for articles if no existing thumbnail
+    if (type === 'article' && !thumbnailUrl) {
+      try {
+        // Call our screenshot API
+        const screenshotResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/generate-screenshot`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url }),
+        });
+        
+        if (screenshotResponse.ok) {
+          const screenshotData = await screenshotResponse.json();
+          if (screenshotData.success && screenshotData.screenshotPath) {
+            thumbnailUrl = screenshotData.screenshotPath;
+          }
+        }
+      } catch (screenshotError) {
+        console.warn('Failed to generate screenshot for article:', screenshotError);
+        // Continue without screenshot - the original metadata extraction will still work
+      }
+    }
+    
     return {
       type,
       title: $('meta[property="og:title"]').attr('content') || $('title').text() || 'Untitled',
       author: $('meta[name="author"]').attr('content') || $('meta[property="article:author"]').attr('content'),
-      thumbnailUrl: $('meta[property="og:image"]').attr('content'),
+      thumbnailUrl,
       description: $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content'),
     };
   } catch (error) {
