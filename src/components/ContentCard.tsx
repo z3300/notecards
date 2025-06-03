@@ -40,7 +40,7 @@ import React, { useState } from 'react';
 
 export interface ContentItem {
   id: string;
-  type: 'youtube' | 'article' | 'reddit' | 'twitter';
+  type: 'youtube' | 'article' | 'reddit' | 'twitter' | 'spotify' | 'soundcloud';
   url: string;
   title: string;
   note: string;
@@ -63,7 +63,9 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
       youtube: 'bg-red-500',
       article: 'bg-blue-500',
       reddit: 'bg-orange-500',
-      twitter: 'bg-sky-500'
+      twitter: 'bg-sky-500',
+      spotify: 'bg-green-500',
+      soundcloud: 'bg-orange-600'
     };
     return colors[type as keyof typeof colors] || 'bg-gray-500';
   };
@@ -132,6 +134,45 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
             )}
           </div>
         );
+      case 'spotify': {
+        const spotifyInfo = extractSpotifyInfo(content.url);
+        return (
+          <div className={`w-full ${CARD_SIZES.embedHeight} bg-gray-100 rounded-t-lg overflow-hidden border-b border-gray-200`}>
+            {spotifyInfo ? (
+              <iframe
+                src={`https://open.spotify.com/embed/${spotifyInfo.type}/${spotifyInfo.id}`}
+                className="w-full h-full"
+                frameBorder="0"
+                allow="encrypted-media"
+                title={content.title}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <div className={`${CARD_SIZES.iconText} ${CARD_SIZES.iconMargin}`}>🎵</div>
+                  <span className={CARD_SIZES.metaText}>Spotify</span>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+      case 'soundcloud': {
+        const encodedUrl = encodeURIComponent(content.url);
+        return (
+          <div className={`w-full ${CARD_SIZES.embedHeight} bg-gray-100 rounded-t-lg overflow-hidden border-b border-gray-200`}>
+            <iframe
+              width="100%"
+              height="100%"
+              scrolling="no"
+              frameBorder="no"
+              allow="autoplay"
+              src={`https://w.soundcloud.com/player/?url=${encodedUrl}&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&visual=true`}
+              title={content.title}
+            />
+          </div>
+        );
+      }
       default:
         return (
           <div className={`w-full ${CARD_SIZES.embedHeight} bg-gray-50 rounded-t-lg flex items-center justify-center border-b border-gray-200`}>
@@ -218,9 +259,9 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
             <div className={`absolute top-3 right-3 ${CARD_SIZES.dotSize} rounded-full ${getTypeColor(content.type)}`}></div>
             
             <div className="text-center">
-              <div className={`text-2xl ${CARD_SIZES.noteMargin}`}>📝</div>
-              <h3 className={`font-medium ${CARD_SIZES.noteTitle} ${CARD_SIZES.noteMargin} text-gray-100`}>Notes</h3>
-              <p className={`${CARD_SIZES.noteText} leading-relaxed text-gray-300`}>
+              {/* <div className={`text-2xl ${CARD_SIZES.noteMargin}`}>📝</div>
+              <h3 className={`font-medium ${CARD_SIZES.noteTitle} ${CARD_SIZES.noteMargin} text-gray-100`}>Notes</h3> */}
+              <p className={`${CARD_SIZES.noteText} leading-relaxed text-gray-100`}>
                 {content.note || "No notes added yet."}
               </p>
             </div>
@@ -248,6 +289,13 @@ const extractTweetId = (url: string): string | null => {
   const regex = /(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/;
   const match = url.match(regex);
   return match ? match[1] : null;
+};
+
+// Helper to extract Spotify type and ID
+const extractSpotifyInfo = (url: string): { type: string; id: string } | null => {
+  const regex = /open\.spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)(?:\S*)?/;
+  const match = url.match(regex);
+  return match ? { type: match[1], id: match[2] } : null;
 };
 
 export default ContentCard; 

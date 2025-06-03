@@ -10,7 +10,25 @@ export default function Dashboard() {
   const sortedContent = [...mockContent].sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-  const [filterType, setFilterType] = useState<'all'|'youtube'|'article'|'reddit'|'twitter'>('all');
+  const [filterType, setFilterType] = useState<string>('all');
+  // Derive dynamic content types and stats
+  const contentTypes = Array.from(new Set(mockContent.map((item) => item.type)));
+  const TYPE_ICONS: Record<string, string> = {
+    youtube: '📹',
+    article: '📄',
+    reddit: '💬',
+    twitter: '🐦',
+    spotify: '🎵',
+    soundcloud: '☁️'
+  };
+  const stats = [
+    { label: 'Total', value: mockContent.length, icon: '📊' },
+    ...contentTypes.map((type) => ({
+      label: type.charAt(0).toUpperCase() + type.slice(1),
+      value: mockContent.filter((item) => item.type === type).length,
+      icon: TYPE_ICONS[type] || '❓'
+    }))
+  ];
   const filteredContent = sortedContent.filter(item => filterType === 'all' || item.type === filterType);
 
   return (
@@ -43,12 +61,7 @@ export default function Dashboard() {
       <main className="max-w-screen-2xl mx-auto px-2 py-8">
         {/* Simple Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          {[
-            { label: 'Total', value: mockContent.length, icon: '📊' },
-            { label: 'Videos', value: mockContent.filter(item => item.type === 'youtube').length, icon: '📹' },
-            { label: 'Articles', value: mockContent.filter(item => item.type === 'article').length, icon: '📄' },
-            { label: 'Social', value: mockContent.filter(item => ['reddit', 'twitter'].includes(item.type)).length, icon: '💬' }
-          ].map((stat, index) => (
+          {stats.map((stat, index) => (
             <div key={index} className="text-center p-4">
               <div className="text-lg mb-1">{stat.icon}</div>
               <div className="text-2xl font-semibold text-gray-900 mb-1">
@@ -63,34 +76,35 @@ export default function Dashboard() {
         <div className="flex justify-end mb-4">
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value as 'all'|'youtube'|'article'|'reddit'|'twitter')}
-            className="text-sm bg-white border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            onChange={(e) => setFilterType(e.target.value)}
+            className="text-sm bg-black border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
             <option value="all">All</option>
-            <option value="youtube">Videos</option>
-            <option value="article">Articles</option>
-            <option value="reddit">Reddit</option>
-            <option value="twitter">Tweets</option>
+            {contentTypes.map((type) => (
+              <option key={type} value={type}>
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </option>
+            ))}
           </select>
         </div>
 
-        {/* Content Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <AnimatePresence>
+        {/* Content Grid with smooth fade on filter change and minimal layout animation */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={filterType}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          >
             {filteredContent.map((content) => (
-              <motion.div
-                key={content.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={{ duration: 0.3 }}
-                layout
-              >
+              <motion.div key={content.id} layout>
                 <ContentCard content={content} />
               </motion.div>
             ))}
-          </AnimatePresence>
-        </div>
+          </motion.div>
+        </AnimatePresence>
 
         {/* Empty State (hidden when there's content) */}
         {mockContent.length === 0 && (

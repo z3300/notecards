@@ -90,5 +90,25 @@ export const mockContent: ContentItem[] = [
     author: 'dan_abramov',
     createdAt: new Date('2024-08-14T15:07:00'),
     location: 'Airport'
+  },
+  {
+    id: '10',
+    type: 'spotify',
+    url: 'https://open.spotify.com/track/3n3Ppam7vgaVa1iaRUc9Lp',
+    title: 'The Killers - Mr. Brightside',
+    note: 'Iconic rock track with a timeless riff that always pumps me up.',
+    author: 'The Killers',
+    createdAt: new Date('2024-09-01T12:00:00'),
+    location: 'Gym'
+  },
+  {
+    id: '11',
+    type: 'soundcloud',
+    url: 'https://soundcloud.com/forss/flickermood',
+    title: 'Forss - Flickermood',
+    note: 'Atmospheric track with chill vibes, great for focusing.',
+    author: 'Forss',
+    createdAt: new Date('2024-09-02T12:00:00'),
+    location: 'Studio'
   }
 ]; 
