@@ -1,6 +1,12 @@
----
+
 
 ## 📁 File & Directory Guide
+
+### `/cli/`
+- **notecard.js**: Command-line interface for adding content directly from terminal. Supports interactive metadata editing and connects to the same database as the web app. Usage: `notecard <url> [note]`
+
+### `/src/lib/`
+- **metadata-extractor.js**: Shared metadata extraction module used by both web API and CLI. Contains logic for YouTube, Reddit, Twitter, Spotify, and generic article parsing.
 
 ### `/src/app/`
 - **page.tsx**: Main dashboard page. Renders the grid of content cards and handles layout.
@@ -35,11 +41,46 @@
 
 ---
 
+## 🖥️ CLI Usage
+
+### **Command Line Interface**
+The `notecard` CLI allows you to add content directly from your terminal:
+
+```bash
+# Basic usage
+npm run cli <url> [note]
+# or
+node cli/notecard.js <url> [note]
+
+# Examples
+notecard "https://youtube.com/watch?v=xyz" "Great tutorial"
+notecard "https://reddit.com/r/programming/comments/abc"
+notecard "https://example.com/article" "Must read later"
+```
+
+### **Interactive Features:**
+- **Metadata extraction**: Automatically pulls title, author, description
+- **Editable prompts**: Modify any extracted data before saving
+- **Screenshot generation**: Option for articles (requires dev server running)
+- **Database integration**: Uses same database as web app
+- **Immediate sync**: Content appears instantly in web dashboard
+
+### **CLI Setup:**
+```bash
+npm install              # Install dependencies
+chmod +x cli/notecard.js # Make executable
+npm link                 # (Optional) Global access
+```
+
+---
+
 ## 🧠 AI Guidance & Best Practices
 
+- **CLI Integration**: The CLI reuses all existing logic - metadata extraction, database operations, and screenshot generation. It provides an alternative interface without duplicating functionality.
+- **Shared Modules**: The `src/lib/metadata-extractor.js` module is used by both the web API and CLI to ensure consistency.
 - **Metadata Extraction**: Use `/api/extract-metadata/route.ts` for all URL parsing and metadata extraction. It supports YouTube, **Reddit (with enhanced post metadata including scores, comments, and subreddit info)**, Twitter/X, **Spotify (with enhanced artist and duration extraction)**, SoundCloud, and generic articles. **For articles, users can choose whether to generate screenshots via a checkbox, but the system now intelligently checks for existing thumbnails first.**
 - **Screenshot Generation**: The `/api/generate-screenshot/route.ts` endpoint uses Puppeteer to capture screenshots of web pages. Screenshots are saved to `/public/screenshots/` and served statically.
-- **Adding Content**: Use `AddContentForm.tsx` for all new content. **Features include:**
+- **Adding Content**: Use `AddContentForm.tsx` for web interface or `cli/notecard.js` for command line. **Both feature:**
   - Screenshot toggle checkbox (checked by default)
   - Screenshot preview with remove button (X)
   - Error handling with warning messages
@@ -48,7 +89,7 @@
 - **Database**: The `createdAt` field in `ContentItem` is a full timestamp (date and time). Always set this to `new Date()` on creation. The `thumbnail` field stores the path to generated screenshots for articles.
 - **API**: All backend CRUD for content should go through the tRPC router in `src/server/api/routers/content.ts`.
 - **Styling**: Use Tailwind CSS utility classes for all styling. Keep UI minimal and modern.
-- **Extending**: To add new content types, update the `ContentType` enum in `schema.prisma`, extend the metadata extraction logic, and update the UI components as needed.
+- **Extending**: To add new content types, update the `ContentType` enum in `schema.prisma`, extend the metadata extraction logic in both the API route and CLI module, and update the UI components as needed.
 
 ---
 
@@ -59,6 +100,7 @@
 - **Preview**: Shows generated screenshot with remove button (X)
 - **Error Handling**: Yellow warning if screenshot fails, but user can still proceed
 - **Flexible**: Works for articles only, other content types use existing thumbnails
+- **CLI Support**: Interactive prompt asks about screenshot generation for articles
 
 ### **API Parameters:**
 ```typescript
@@ -194,10 +236,11 @@ if (generateScreenshot && type === 'article' && !existingThumbnail) {
 
 1. **Backend**: Add/extend tRPC routers in `src/server/api/routers/`.
 2. **Frontend**: Add/modify React components in `src/components/`.
-3. **Metadata**: Update `/api/extract-metadata/route.ts` for new content types.
+3. **Metadata**: Update `/api/extract-metadata/route.ts` AND `src/lib/metadata-extractor.js` for new content types.
 4. **Screenshots**: Use `/api/generate-screenshot/route.ts` for any new content types that need visual thumbnails.
 5. **Database**: Update `prisma/schema.prisma` and run `prisma migrate`.
 6. **UI**: Use Tailwind for all new styles.
+7. **CLI**: The CLI will automatically support new content types through the shared metadata extractor.
 
 ---
 
@@ -207,6 +250,9 @@ if (generateScreenshot && type === 'article' && !existingThumbnail) {
 npm install
 npm run dev
 # Visit http://localhost:3000 (or the port shown in your terminal)
+
+# CLI usage (in another terminal)
+npm run cli "https://example.com" "My note"
 ```
 
 **Note**: Screenshot generation requires Puppeteer, which will download Chromium on first run. This may take a few minutes.
@@ -216,10 +262,12 @@ npm run dev
 ## 🤖 For AI Contributors
 
 - **Always check this guide before making changes.**
+- **CLI and Web App share logic**: Changes to metadata extraction should be made in both the API route and the CLI module, or better yet, extracted to a shared utility.
 - **Describe new files and their purpose here when you add them.**
 - **Keep all logic modular and DRY.**
-- **Screenshot functionality includes user controls and error handling - respect user preferences.**
+- **Screenshot functionality includes user controls and error handling - respect user preferences in both interfaces.**
 - **Spotify metadata extraction uses multiple fallback strategies - maintain this robustness.**
+- **CLI provides same functionality as web interface - maintain feature parity.**
 - **If in doubt, ask for clarification or check existing patterns.**
 
 ---

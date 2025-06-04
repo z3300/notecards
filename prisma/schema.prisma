@@ -20,6 +20,8 @@ enum ContentType {
   twitter
   spotify
   soundcloud
+  movie
+  book
 }
 
 model ContentItem {

@@ -10,6 +10,8 @@ export default function Dashboard() {
   const { data: items = [], isLoading } = trpc.content.getAll.useQuery();
   const [filterType, setFilterType] = useState<string>('all');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   if (isLoading) return <div className="text-center py-16">Loading...</div>;
   
@@ -36,6 +38,9 @@ export default function Dashboard() {
   ];
   const filteredContent = sortedContent.filter(item => filterType === 'all' || item.type === filterType);
 
+  // Get current filter display name
+  const currentFilterLabel = filterType === 'all' ? 'All' : filterType.charAt(0).toUpperCase() + filterType.slice(1);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -43,17 +48,54 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                Content Dashboard
+              <h1 className="text-2xl font-semibold text-gray-700">
+                my cards
               </h1>
-              <p className="mt-1 text-gray-600 text-sm">
-                Your saved links, articles, and videos with personal notes
-              </p>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500">
-                {items.length} items
-              </span>
+              {/* Hoverable Stats Dropdown */}
+              <div className="relative">
+                <span 
+                  className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer transition-colors"
+                  onMouseEnter={() => setShowStats(true)}
+                  onMouseLeave={() => setShowStats(false)}
+                >
+                  {items.length} items
+                </span>
+                
+                <AnimatePresence>
+                  {showStats && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[160px] z-10"
+                      onMouseEnter={() => setShowStats(true)}
+                      onMouseLeave={() => setShowStats(false)}
+                    >
+                      <div className="space-y-2">
+                        {stats.map((stat, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05, duration: 0.15 }}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs">{stat.icon}</span>
+                              <span className="text-gray-600">{stat.label}</span>
+                            </div>
+                            <span className="font-medium text-gray-900">{stat.value}</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              
               <button 
                 onClick={() => setShowAddForm(true)}
                 className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -66,34 +108,68 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-screen-2xl mx-auto px-2 py-8">
-        {/* Simple Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          {stats.map((stat, index) => (
-            <div key={index} className="text-center p-4">
-              <div className="text-lg mb-1">{stat.icon}</div>
-              <div className="text-2xl font-semibold text-gray-900 mb-1">
-                {stat.value}
-              </div>
-              <div className="text-sm text-gray-500">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-
+      <main className="max-w-screen-2xl mx-auto px-4 py-8">
         {/* Filter Dropdown */}
         <div className="flex justify-end mb-4">
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="text-sm bg-white border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
-          >
-            <option value="all">All</option>
-            {contentTypes.map((type) => (
-              <option key={type} value={type}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-black font-medium">Filter:</span>
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="flex items-center space-x-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors"
+              >
+                <span className="text-black">{currentFilterLabel}</span>
+                <motion.svg
+                  animate={{ rotate: showFilterDropdown ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </motion.svg>
+              </button>
+
+              <AnimatePresence>
+                {showFilterDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px] z-10"
+                  >
+                    <button
+                      onClick={() => {
+                        setFilterType('all');
+                        setShowFilterDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                        filterType === 'all' ? 'bg-gray-100 text-gray-900 font-medium' : 'text-black'
+                      }`}
+                    >
+                      All
+                    </button>
+                    {contentTypes.map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => {
+                          setFilterType(type);
+                          setShowFilterDropdown(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                          filterType === type ? 'bg-gray-100 text-gray-900 font-medium' : 'text-black'
+                        }`}
+                      >
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
 
         {/* Content Grid with smooth fade on filter change and minimal layout animation */}
@@ -138,7 +214,7 @@ export default function Dashboard() {
       <footer className="border-t border-gray-100 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="text-center text-gray-400 text-xs">
-            Click cards to view notes • Click "Open Link" to visit content
+            vibe coded with ❤️ lol
           </div>
         </div>
       </footer>

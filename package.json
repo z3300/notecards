@@ -2,12 +2,16 @@
   "name": "notecards",
   "version": "0.1.0",
   "private": true,
+  "bin": {
+    "notecard": "./cli/notecard.js"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "prisma db seed"
+    "seed": "prisma db seed",
+    "cli": "node cli/notecard.js"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",
@@ -18,6 +22,7 @@
     "@trpc/server": "^11.2.0",
     "cheerio": "^1.0.0",
     "framer-motion": "^12.15.0",
+    "inquirer": "^12.6.3",
     "next": "15.3.3",
     "node-html-parser": "^7.0.1",
     "puppeteer": "^24.10.0",
@@ -29,6 +34,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/inquirer": "^9.0.8",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

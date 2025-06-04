@@ -40,7 +40,7 @@ import React, { useState } from 'react';
 
 export interface ContentItem {
   id: string;
-  type: 'youtube' | 'article' | 'reddit' | 'twitter' | 'spotify' | 'soundcloud';
+  type: 'youtube' | 'article' | 'reddit' | 'twitter' | 'spotify' | 'soundcloud' | 'movie' | 'book';
   url: string;
   title: string;
   note: string;
@@ -65,7 +65,9 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
       reddit: 'bg-orange-500',
       twitter: 'bg-sky-500',
       spotify: 'bg-green-500',
-      soundcloud: 'bg-orange-600'
+      soundcloud: 'bg-orange-600',
+      movie: 'bg-purple-500',
+      book: 'bg-amber-500'
     };
     return colors[type as keyof typeof colors] || 'bg-gray-500';
   };
@@ -205,6 +207,56 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
           </div>
         );
       }
+      case 'movie':
+        return (
+          <div className={`w-full ${CARD_SIZES.embedHeight} bg-gray-50 rounded-t-lg overflow-hidden border-b border-gray-200`}>
+            {content.thumbnail ? (
+              <img 
+                src={content.thumbnail} 
+                alt={content.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback to default icon if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div className={`w-full h-full flex items-center justify-center text-gray-600 ${content.thumbnail ? 'hidden' : ''}`}>
+              <div className="text-center">
+                <div className={`${CARD_SIZES.iconText} ${CARD_SIZES.iconMargin}`}>🎬</div>
+                <div className={CARD_SIZES.metaText}>Movie</div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'book':
+        return (
+          <div className={`w-full ${CARD_SIZES.embedHeight} bg-gray-50 rounded-t-lg overflow-hidden border-b border-gray-200`}>
+            {content.thumbnail ? (
+              <img 
+                src={content.thumbnail} 
+                alt={content.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback to default icon if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div className={`w-full h-full flex items-center justify-center text-gray-600 ${content.thumbnail ? 'hidden' : ''}`}>
+              <div className="text-center">
+                <div className={`${CARD_SIZES.iconText} ${CARD_SIZES.iconMargin}`}>📚</div>
+                <div className={CARD_SIZES.metaText}>Book</div>
+              </div>
+            </div>
+          </div>
+        );
       default:
         return (
           <div className={`w-full ${CARD_SIZES.embedHeight} bg-gray-50 rounded-t-lg flex items-center justify-center border-b border-gray-200`}>
