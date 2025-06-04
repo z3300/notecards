@@ -17,7 +17,7 @@ interface MetadataResponse {
 // YouTube API key would go here in production
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
-async function extractYouTubeMetadata(url: string): Promise<any> {
+export async function extractYouTubeMetadata(url: string): Promise<any> {
   try {
     const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
     if (!videoId) throw new Error('Invalid YouTube URL');
@@ -71,7 +71,7 @@ async function extractYouTubeMetadata(url: string): Promise<any> {
   }
 }
 
-async function extractRedditMetadata(url: string): Promise<any> {
+export async function extractRedditMetadata(url: string): Promise<any> {
   try {
     // Convert to JSON API URL
     const jsonUrl = url.includes('.json') ? url : `${url}.json`;
@@ -251,7 +251,7 @@ async function extractRedditMetadata(url: string): Promise<any> {
   }
 }
 
-async function extractTwitterMetadata(url: string): Promise<any> {
+export async function extractTwitterMetadata(url: string): Promise<any> {
   try {
     // For Twitter, we'll mainly use web scraping since the API requires authentication
     const response = await fetch(url, {
@@ -275,7 +275,7 @@ async function extractTwitterMetadata(url: string): Promise<any> {
   }
 }
 
-async function extractSpotifyMetadata(url: string): Promise<any> {
+export async function extractSpotifyMetadata(url: string): Promise<any> {
   try {
     const response = await fetch(url, {
       headers: {
@@ -406,7 +406,57 @@ async function extractSpotifyMetadata(url: string): Promise<any> {
   }
 }
 
-async function extractGenericMetadata(url: string, generateScreenshot: boolean = true): Promise<any> {
+export async function extractInstagramMetadata(url: string): Promise<any> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; URLMetadataBot/1.0)',
+      },
+    });
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    return {
+      type: 'instagram',
+      title: $('meta[property="og:title"]').attr('content') || $('title').text(),
+      author:
+        $('meta[property="instapp:owner_user_name"]').attr('content') ||
+        $('meta[name="author"]').attr('content'),
+      thumbnailUrl: $('meta[property="og:image"]').attr('content'),
+      description: $('meta[property="og:description"]').attr('content'),
+    };
+  } catch (error) {
+    throw new Error(`Failed to extract Instagram metadata: ${error}`);
+  }
+}
+
+export async function extractPinterestMetadata(url: string): Promise<any> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; URLMetadataBot/1.0)',
+      },
+    });
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    return {
+      type: 'pinterest',
+      title: $('meta[property="og:title"]').attr('content') || $('title').text(),
+      author:
+        $('meta[name="pinterestapp:ownername"]').attr('content') ||
+        $('meta[name="author"]').attr('content'),
+      thumbnailUrl: $('meta[property="og:image"]').attr('content'),
+      description: $('meta[property="og:description"]').attr('content'),
+    };
+  } catch (error) {
+    throw new Error(`Failed to extract Pinterest metadata: ${error}`);
+  }
+}
+
+export async function extractGenericMetadata(url: string, generateScreenshot: boolean = true): Promise<any> {
   try {
     const response = await fetch(url, {
       headers: {
@@ -504,6 +554,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<MetadataR
       metadata = await extractTwitterMetadata(url);
     } else if (url.includes('spotify.com')) {
       metadata = await extractSpotifyMetadata(url);
+    } else if (url.includes('instagram.com')) {
+      metadata = await extractInstagramMetadata(url);
+    } else if (url.includes('pinterest.com') || url.includes('pin.it')) {
+      metadata = await extractPinterestMetadata(url);
     } else {
       metadata = await extractGenericMetadata(url, generateScreenshot);
     }
