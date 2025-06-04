@@ -3,10 +3,8 @@
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import AddContentForm from '@/components/AddContentForm';
 import ContentCardSkeleton from '@/components/ContentCardSkeleton';
 import { trpc } from '@/utils/trpc';
-import { publicModeConfig } from '@/config/public-mode';
 
 const ContentCard = dynamic(() => import('@/components/ContentCard'), {
   loading: () => <ContentCardSkeleton />,
@@ -16,7 +14,6 @@ export default function Dashboard() {
   const { data: items = [], isLoading } = trpc.content.getAll.useQuery();
   const [filterType, setFilterType] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [showAddForm, setShowAddForm] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
@@ -129,15 +126,7 @@ export default function Dashboard() {
                 </AnimatePresence>
               </div>
               
-              {/* Only show Add Content button in private mode */}
-              {!publicModeConfig.isPublic && (
-                <button 
-                  onClick={() => setShowAddForm(true)}
-                  className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  Add Content
-                </button>
-              )}
+
             </div>
           </div>
           
@@ -293,18 +282,8 @@ export default function Dashboard() {
               No content yet
             </h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              {publicModeConfig.isPublic 
-                ? "Check back later for new content."
-                : "Start building your personal content library by saving interesting links, videos, and articles."}
+              Check back later for new content.
             </p>
-            {!publicModeConfig.isPublic && (
-              <button 
-                onClick={() => setShowAddForm(true)}
-                className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-md font-medium transition-colors"
-              >
-                Add Your First Item
-              </button>
-            )}
           </div>
         )}
       </main>
@@ -318,13 +297,7 @@ export default function Dashboard() {
         </div>
       </footer>
 
-      {/* Add Content Modal - Only render in private mode */}
-      {!publicModeConfig.isPublic && (
-        <AddContentForm 
-          isOpen={showAddForm} 
-          onClose={() => setShowAddForm(false)} 
-        />
-      )}
+
     </div>
   );
 }
