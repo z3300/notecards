@@ -56,7 +56,7 @@ interface ContentCardProps {
 }
 
 const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [flipCount, setFlipCount] = useState(0);
 
   const getTypeColor = (type: string) => {
     const colors = {
@@ -266,12 +266,16 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
     }
   };
 
+  const getRotation = () => {
+    return `rotateY(${flipCount * 180}deg)`;
+  };
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't flip if clicking on the link
     if ((e.target as HTMLElement).closest('a')) {
       return;
     }
-    setIsFlipped(!isFlipped);
+    setFlipCount((prev) => prev + 1);
   };
 
   const handleLinkClick = (e: React.MouseEvent) => {
@@ -282,9 +286,8 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
   return (
     <div className={`perspective-1000 w-full ${CARD_SIZES.height}`}>
       <div 
-        className={`relative w-full h-full transition-transform duration-700 ease-in-out preserve-3d cursor-pointer ${
-          isFlipped ? 'rotate-y-180' : ''
-        }`}
+        className={`relative w-full h-full transition-transform duration-700 ease-in-out preserve-3d cursor-pointer`}
+        style={{ transform: getRotation() }}
         onClick={handleCardClick}
       >
         {/* Front of card */}

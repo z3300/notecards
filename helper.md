@@ -6,7 +6,7 @@
 - **notecard.js**: Command-line interface for adding content directly from terminal. Supports interactive metadata editing and connects to the same database as the web app. Usage: `notecard <url> [note]`
 
 ### `/src/lib/`
-- **metadata-extractor.js**: Shared metadata extraction module used by both web API and CLI. Contains logic for YouTube, Reddit, Twitter, Spotify, and generic article parsing.
+- **metadata-extractor.js**: Shared metadata extraction module used by both web API and CLI. Contains logic for YouTube, Reddit, Twitter, Spotify, **movies (IMDb, TMDb, Letterboxd), books (Goodreads, Google Books, Amazon),** and generic article parsing.
 
 ### `/src/app/`
 - **page.tsx**: Main dashboard page. Renders the grid of content cards and handles layout.
@@ -14,13 +14,13 @@
 - **providers.tsx**: React context providers for the app.
 - **globals.css**: Global styles (Tailwind CSS).
 - **api/**: Next.js API routes.
-  - **/extract-metadata/route.ts**: POST endpoint for extracting metadata from pasted URLs (YouTube, Reddit, Twitter, etc.). Uses Cheerio for scraping and supports YouTube API if configured. **Now supports optional screenshot generation with `generateScreenshot` parameter and improved Spotify metadata extraction with artist names and duration.**
+  - **/extract-metadata/route.ts**: POST endpoint for extracting metadata from pasted URLs (YouTube, Reddit, Twitter, **movies, books,** etc.). Uses Cheerio for scraping and supports YouTube API if configured. **Now supports optional screenshot generation with `generateScreenshot` parameter and improved Spotify metadata extraction with artist names and duration. Added comprehensive movie support for IMDb, TMDb, and Letterboxd. Added book support for Goodreads, Google Books, and Amazon.**
   - **/generate-screenshot/route.ts**: POST endpoint for generating screenshots of web pages using Puppeteer. Used automatically for article thumbnails when requested.
   - **/trpc/**: tRPC API handler for Next.js.
 
 ### `/src/components/`
 - **AddContentForm.tsx**: Modal form for adding new content. Prompts user to paste a URL, auto-fills metadata via `/api/extract-metadata`, and allows manual editing before saving. **Now includes screenshot toggle, preview functionality, and error handling.**
-- **ContentCard.tsx**: The main card UI for displaying saved content. Supports flipping for notes, shows type/color dot, date/time, and content-specific embeds (YouTube, Twitter, etc.). **Now displays screenshot thumbnails for articles when available.**
+- **ContentCard.tsx**: The main card UI for displaying saved content. Supports flipping for notes, shows type/color dot, date/time, and content-specific embeds (YouTube, Twitter, etc.). **Now displays screenshot thumbnails for articles when available. Added support for movie and book cards with proper thumbnails and fallback icons.**
 
 ### `/src/server/`
 - **db.ts**: Prisma client instance for database access.
@@ -56,6 +56,8 @@ node cli/notecard.js <url> [note]
 notecard "https://youtube.com/watch?v=xyz" "Great tutorial"
 notecard "https://reddit.com/r/programming/comments/abc"
 notecard "https://example.com/article" "Must read later"
+notecard "https://imdb.com/title/tt1375666" "Amazing movie!"
+notecard "https://goodreads.com/book/show/123456" "Must read this book"
 ```
 
 ### **Interactive Features:**
@@ -78,18 +80,105 @@ npm link                 # (Optional) Global access
 
 - **CLI Integration**: The CLI reuses all existing logic - metadata extraction, database operations, and screenshot generation. It provides an alternative interface without duplicating functionality.
 - **Shared Modules**: The `src/lib/metadata-extractor.js` module is used by both the web API and CLI to ensure consistency.
-- **Metadata Extraction**: Use `/api/extract-metadata/route.ts` for all URL parsing and metadata extraction. It supports YouTube, **Reddit (with enhanced post metadata including scores, comments, and subreddit info)**, Twitter/X, **Spotify (with enhanced artist and duration extraction)**, SoundCloud, and generic articles. **For articles, users can choose whether to generate screenshots via a checkbox, but the system now intelligently checks for existing thumbnails first.**
+- **Metadata Extraction**: Use `/api/extract-metadata/route.ts` for all URL parsing and metadata extraction. It supports YouTube, **Reddit (with enhanced post metadata including scores, comments, and subreddit info)**, Twitter/X, **Spotify (with enhanced artist and duration extraction)**, SoundCloud, **movies (IMDb, TMDb, Letterboxd with director, year, rating, runtime), books (Goodreads, Google Books, Amazon with author, page count, publication year, rating),** and generic articles. **For articles, users can choose whether to generate screenshots via a checkbox, but the system now intelligently checks for existing thumbnails first.**
 - **Screenshot Generation**: The `/api/generate-screenshot/route.ts` endpoint uses Puppeteer to capture screenshots of web pages. Screenshots are saved to `/public/screenshots/` and served statically.
 - **Adding Content**: Use `AddContentForm.tsx` for web interface or `cli/notecard.js` for command line. **Both feature:**
   - Screenshot toggle checkbox (checked by default)
   - Screenshot preview with remove button (X)
   - Error handling with warning messages
   - Ability to proceed even if screenshot fails
-- **Content Display**: Use `ContentCard.tsx` for rendering content. **Articles now display screenshot thumbnails when available, with fallback to the default icon.** The color dot should be aligned with the title text (not card center). Date and time are shown under the title, with location (if any) below.
-- **Database**: The `createdAt` field in `ContentItem` is a full timestamp (date and time). Always set this to `new Date()` on creation. The `thumbnail` field stores the path to generated screenshots for articles.
+- **Content Display**: Use `ContentCard.tsx` for rendering content. **Articles now display screenshot thumbnails when available, with fallback to the default icon. Movies show poster images with 🎬 fallback icon. Books show cover images with 📚 fallback icon.** The color dot should be aligned with the title text (not card center). Date and time are shown under the title, with location (if any) below.
+- **Database**: The `createdAt` field in `ContentItem` is a full timestamp (date and time). Always set this to `new Date()` on creation. The `thumbnail` field stores the path to generated screenshots for articles or poster/cover URLs for movies/books.
 - **API**: All backend CRUD for content should go through the tRPC router in `src/server/api/routers/content.ts`.
 - **Styling**: Use Tailwind CSS utility classes for all styling. Keep UI minimal and modern.
 - **Extending**: To add new content types, update the `ContentType` enum in `schema.prisma`, extend the metadata extraction logic in both the API route and CLI module, and update the UI components as needed.
+
+---
+
+## 🎬 Movie Integration
+
+### **Supported Sources:**
+- **IMDb**: Full movie metadata including title, director, year, rating, poster, plot, runtime
+- **TMDb (The Movie Database)**: Movie details with high-quality posters and metadata  
+- **Letterboxd**: Film reviews and ratings with poster images
+- **Generic movie pages**: Fallback to Open Graph metadata
+
+### **Extracted Data:**
+- **Title**: Movie title with release year (e.g., "Inception (2010)")
+- **Director**: Formatted as "Directed by [Director Name]"
+- **Poster**: High-quality movie poster images
+- **Runtime**: Formatted as "2h 28m" or "148m"
+- **Rating**: IMDb rating, TMDb score, or Letterboxd average
+- **Plot**: Movie synopsis/description
+- **Year**: Release year automatically appended to title
+
+### **Example URLs:**
+```bash
+# IMDb
+https://www.imdb.com/title/tt1375666/
+
+# TMDb  
+https://www.themoviedb.org/movie/27205-inception
+
+# Letterboxd
+https://letterboxd.com/film/inception/
+```
+
+---
+
+## 📚 Book Integration  
+
+### **Supported Sources:**
+- **Goodreads**: Complete book metadata including title, author, rating, cover, description, page count
+- **Google Books**: Book details with cover images and publication info
+- **Amazon Books**: Book pages with author, cover, ratings, page count
+- **Generic book pages**: Fallback to Open Graph and book-specific meta tags
+
+### **Extracted Data:**
+- **Title**: Book title as published
+- **Author**: Formatted as "by [Author Name]"
+- **Cover**: Book cover images from various sources
+- **Page Count**: Used in duration field as "[XXX] pages"
+- **Rating**: Goodreads rating, Amazon stars, etc.
+- **Description**: Book synopsis/description  
+- **Publication Year**: Year of publication
+- **Publisher**: When available
+
+### **Example URLs:**
+```bash
+# Goodreads
+https://www.goodreads.com/book/show/11297.The_Name_of_the_Wind
+
+# Google Books
+https://books.google.com/books?id=ABC123
+
+# Amazon Books
+https://www.amazon.com/dp/0756404746
+```
+
+---
+
+## 🎨 Visual Design
+
+### **Content Type Colors:**
+- YouTube: Red (`bg-red-500`)
+- Article: Blue (`bg-blue-500`) 
+- Reddit: Orange (`bg-orange-500`)
+- Twitter: Sky (`bg-sky-500`)
+- Spotify: Green (`bg-green-500`)
+- SoundCloud: Orange (`bg-orange-600`)
+- **Movie: Purple (`bg-purple-500`)**
+- **Book: Amber (`bg-amber-500`)**
+
+### **Content Type Icons:**
+- YouTube: ▶️
+- Article: 📄
+- Reddit: 💬  
+- Twitter: 🐦
+- Spotify: 🎵
+- SoundCloud: 🎧
+- **Movie: ��**
+- **Book: 📚**
 
 ---
 
