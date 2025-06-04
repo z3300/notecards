@@ -271,6 +271,11 @@ const ContentCard: React.FC<ContentCardProps> = ({ content }) => {
                   </h3>
                   <div className={`${CARD_SIZES.dotSize} rounded-full ${getTypeColor(content.type)} ml-2 flex-shrink-0`}></div>
                 </div>
+                {content.author && (
+                  <h3 className={`text-sm text-gray-800 mb-2`}>
+                     {content.author}
+                  </h3>
+                )}
                 <div className={`flex items-center justify-between ${CARD_SIZES.metaText} text-gray-500 mb-4`}>
                   <span className="capitalize">{content.type}</span>
                   {content.duration && <span>{content.duration}</span>}

@@ -14,12 +14,32 @@ const ContentCard = dynamic(() => import('@/components/ContentCard'), {
 export default function Dashboard() {
   const { data: items = [], isLoading } = trpc.content.getAll.useQuery();
   const [filterType, setFilterType] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   
   // Sort content by date (newest first)
   const sortedContent = [...items].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  
+  // Search function that looks through multiple fields
+  const searchContent = (content: any, query: string) => {
+    if (!query.trim()) return true;
+    
+    const searchTerm = query.toLowerCase();
+    const searchableFields = [
+      content.title,
+      content.author,
+      content.note,
+      content.type,
+      content.location,
+      content.url
+    ];
+    
+    return searchableFields.some(field => 
+      field && field.toString().toLowerCase().includes(searchTerm)
+    );
+  };
   
   // Derive dynamic content types and stats
   const contentTypes = Array.from(new Set(items.map((item) => item.type)));
@@ -31,15 +51,22 @@ export default function Dashboard() {
     spotify: '🎵',
     soundcloud: '☁️'
   };
+  
+  // Apply both search and type filtering
+  const filteredContent = sortedContent.filter(item => {
+    const matchesType = filterType === 'all' || item.type === filterType;
+    const matchesSearch = searchContent(item, searchQuery);
+    return matchesType && matchesSearch;
+  });
+  
   const stats = [
-    { label: 'Total', value: items.length, icon: '📊' },
+    { label: 'Total', value: filteredContent.length, icon: '📊' },
     ...contentTypes.map((type) => ({
       label: type.charAt(0).toUpperCase() + type.slice(1),
-      value: items.filter((item) => item.type === type).length,
+      value: filteredContent.filter((item) => item.type === type).length,
       icon: TYPE_ICONS[type] || '❓'
     }))
   ];
-  const filteredContent = sortedContent.filter(item => filterType === 'all' || item.type === filterType);
 
   // Get current filter display name
   const currentFilterLabel = filterType === 'all' ? 'All' : filterType.charAt(0).toUpperCase() + filterType.slice(1);
@@ -49,7 +76,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-semibold text-gray-700">
                 my cards
@@ -63,7 +90,7 @@ export default function Dashboard() {
                   onMouseEnter={() => setShowStats(true)}
                   onMouseLeave={() => setShowStats(false)}
                 >
-                  {items.length} items
+                  {filteredContent.length} items
                 </span>
                 
                 <AnimatePresence>
@@ -107,13 +134,49 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
+          
+          {/* Search Bar */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search by title, author, notes, type, location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent bg-gray-50 text-gray-900 placeholder-gray-500 transition-all duration-200"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-screen-2xl mx-auto px-4 py-8">
-        {/* Filter Dropdown */}
-        <div className="flex justify-end mb-4">
+        {/* Filter Dropdown and Search Results Info */}
+        <div className="flex justify-between items-center mb-4">
+          {/* Search Results Info */}
+          <div className="flex items-center space-x-2">
+            {searchQuery && (
+              <span className="text-sm text-gray-600">
+                {filteredContent.length} result{filteredContent.length !== 1 ? 's' : ''} for "{searchQuery}"
+              </span>
+            )}
+          </div>
+          
+          {/* Filter Dropdown */}
           <div className="flex items-center space-x-2">
             <span className="text-sm text-black font-medium">Filter:</span>
             <div className="relative">
@@ -178,7 +241,7 @@ export default function Dashboard() {
         {/* Content Grid with smooth fade on filter change and minimal layout animation */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={filterType}
+            key={`${filterType}-${searchQuery}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -197,8 +260,27 @@ export default function Dashboard() {
           </motion.div>
         </AnimatePresence>
 
+        {/* Empty State for Search Results */}
+        {!isLoading && filteredContent.length === 0 && searchQuery && (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-6 opacity-50">🔍</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No results found
+            </h3>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              No content matches "{searchQuery}". Try adjusting your search terms or clear the search to see all content.
+            </p>
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-md font-medium transition-colors"
+            >
+              Clear Search
+            </button>
+          </div>
+        )}
+
         {/* Empty State (hidden when there's content) */}
-        {items.length === 0 && (
+        {items.length === 0 && !searchQuery && (
           <div className="text-center py-16">
             <div className="text-6xl mb-6 opacity-50">📚</div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
