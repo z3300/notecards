@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join } from 'path';
 import puppeteer from 'puppeteer';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 interface ScreenshotResponse {
   success: boolean;
   screenshotPath?: string;
   error?: string;
 }
+
+// Initialize S3 Client
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 
 export async function POST(request: NextRequest): Promise<NextResponse<ScreenshotResponse>> {
   try {
@@ -30,23 +40,28 @@ export async function POST(request: NextRequest): Promise<NextResponse<Screensho
       );
     }
 
-    // Create screenshots directory if it doesn't exist
-    const screenshotsDir = join(process.cwd(), 'public', 'screenshots');
-    if (!existsSync(screenshotsDir)) {
-      mkdirSync(screenshotsDir, { recursive: true });
+    // Check if S3 bucket is configured
+    if (!S3_BUCKET_NAME) {
+      console.error('S3_BUCKET_NAME is not defined in environment variables.');
+      return NextResponse.json(
+        { success: false, error: 'S3 bucket name not configured' },
+        { status: 500 }
+      );
     }
 
     // Generate unique filename based on URL and timestamp
     const urlHash = Buffer.from(url).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
     const timestamp = Date.now();
     const filename = `screenshot_${urlHash}_${timestamp}.png`;
-    const filepath = join(screenshotsDir, filename);
+    const s3Key = `screenshots/${filename}`;
 
     // Generate screenshot using puppeteer
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
+
+    let screenshotBuffer: Buffer;
 
     try {
       const page = await browser.newPage();
@@ -64,8 +79,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<Screensho
         timeout: 30000
       });
 
-      // Take screenshot
-      const screenshot = await page.screenshot({
+      // Take screenshot and store in buffer
+      screenshotBuffer = await page.screenshot({
         type: 'png',
         clip: {
           x: 0,
@@ -73,30 +88,38 @@ export async function POST(request: NextRequest): Promise<NextResponse<Screensho
           width: 1200,
           height: 600 // Crop to get a thumbnail-like aspect ratio
         }
-      });
-
-      // Save screenshot to file
-      writeFileSync(filepath, screenshot);
+      }) as Buffer;
 
       await page.close();
     } finally {
       await browser.close();
     }
 
-    // Return the relative path for use in the frontend
-    const relativePath = `/screenshots/${filename}`;
+    // Upload to S3
+    const putObjectCommand = new PutObjectCommand({
+      Bucket: S3_BUCKET_NAME,
+      Key: s3Key,
+      Body: screenshotBuffer,
+      ContentType: 'image/png',
+      // ACL: 'public-read', // Make images publicly accessible
+    });
+
+    await s3Client.send(putObjectCommand);
+
+    // Construct the S3 URL
+    const s3ObjectUrl = `https://${S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
 
     return NextResponse.json({
       success: true,
-      screenshotPath: relativePath,
+      screenshotPath: s3ObjectUrl,
     });
 
   } catch (error) {
-    console.error('Error generating screenshot:', error);
+    console.error('Error generating or uploading screenshot:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Failed to generate screenshot' 
+        error: error instanceof Error ? error.message : 'Failed to generate or upload screenshot' 
       },
       { status: 500 }
     );

@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import AddContentForm from '@/components/AddContentForm';
 import ContentCardSkeleton from '@/components/ContentCardSkeleton';
 import { trpc } from '@/utils/trpc';
+import { publicModeConfig } from '@/config/public-mode';
 
 const ContentCard = dynamic(() => import('@/components/ContentCard'), {
   loading: () => <ContentCardSkeleton />,
@@ -81,7 +82,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-semibold text-gray-700">
-                my cards
+                notecards
               </h1>
             </div>
             <div className="flex items-center space-x-4">
@@ -128,12 +129,15 @@ export default function Dashboard() {
                 </AnimatePresence>
               </div>
               
-              <button 
-                onClick={() => setShowAddForm(true)}
-                className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Add Content
-              </button>
+              {/* Only show Add Content button in private mode */}
+              {!publicModeConfig.isPublic && (
+                <button 
+                  onClick={() => setShowAddForm(true)}
+                  className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Add Content
+                </button>
+              )}
             </div>
           </div>
           
@@ -289,14 +293,18 @@ export default function Dashboard() {
               No content yet
             </h3>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Start building your personal content library by saving interesting links, videos, and articles.
+              {publicModeConfig.isPublic 
+                ? "Check back later for new content."
+                : "Start building your personal content library by saving interesting links, videos, and articles."}
             </p>
-            <button 
-              onClick={() => setShowAddForm(true)}
-              className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-md font-medium transition-colors"
-            >
-              Add Your First Item
-            </button>
+            {!publicModeConfig.isPublic && (
+              <button 
+                onClick={() => setShowAddForm(true)}
+                className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-md font-medium transition-colors"
+              >
+                Add Your First Item
+              </button>
+            )}
           </div>
         )}
       </main>
@@ -310,11 +318,13 @@ export default function Dashboard() {
         </div>
       </footer>
 
-      {/* Add Content Modal */}
-      <AddContentForm 
-        isOpen={showAddForm} 
-        onClose={() => setShowAddForm(false)} 
-      />
+      {/* Add Content Modal - Only render in private mode */}
+      {!publicModeConfig.isPublic && (
+        <AddContentForm 
+          isOpen={showAddForm} 
+          onClose={() => setShowAddForm(false)} 
+        />
+      )}
     </div>
   );
 }
