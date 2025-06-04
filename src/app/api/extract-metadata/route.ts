@@ -687,7 +687,7 @@ async function extractBookMetadata(url: string): Promise<any> {
   }
 }
 
-async function extractGenericMetadata(url: string, generateScreenshot: boolean = true): Promise<any> {
+async function extractGenericMetadata(url: string): Promise<any> {
   try {
     const response = await fetch(url, {
       headers: {
@@ -709,31 +709,7 @@ async function extractGenericMetadata(url: string, generateScreenshot: boolean =
                       $('meta[name="image"]').attr('content') ||
                       $('link[rel="image_src"]').attr('href');
     
-    // Generate screenshot for articles if requested, no existing thumbnail, and it's an article
-    if (generateScreenshot && type === 'article' && !thumbnailUrl) {
-      try {
-        console.log('No existing thumbnail found, generating screenshot for:', url);
-        // Call our screenshot API
-        const screenshotResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/generate-screenshot`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ url }),
-        });
-        
-        if (screenshotResponse.ok) {
-          const screenshotData = await screenshotResponse.json();
-          if (screenshotData.success && screenshotData.screenshotPath) {
-            thumbnailUrl = screenshotData.screenshotPath;
-            console.log('Screenshot generated successfully:', screenshotData.screenshotPath);
-          }
-        }
-      } catch (screenshotError) {
-        console.warn('Failed to generate screenshot for article:', screenshotError);
-        // Continue without screenshot - the original metadata extraction will still work
-      }
-    } else if (thumbnailUrl) {
+    if (thumbnailUrl) {
       console.log('Using existing thumbnail from metadata:', thumbnailUrl);
     }
     
@@ -744,8 +720,7 @@ async function extractGenericMetadata(url: string, generateScreenshot: boolean =
       thumbnailUrl,
       description: $('meta[property="og:description"]').attr('content') || $('meta[name="description"]').attr('content'),
       metadata: {
-        hasOriginalThumbnail: !!($('meta[property="og:image"]').attr('content') || $('meta[name="twitter:image"]').attr('content')),
-        screenshotGenerated: thumbnailUrl && thumbnailUrl.includes('/screenshots/')
+        hasOriginalThumbnail: !!($('meta[property="og:image"]').attr('content') || $('meta[name="twitter:image"]').attr('content'))
       }
     };
   } catch (error) {
@@ -755,7 +730,7 @@ async function extractGenericMetadata(url: string, generateScreenshot: boolean =
 
 export async function POST(request: NextRequest): Promise<NextResponse<MetadataResponse>> {
   try {
-    const { url, generateScreenshot = true } = await request.json();
+    const { url } = await request.json();
     
     if (!url || typeof url !== 'string') {
       return NextResponse.json(
@@ -790,7 +765,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<MetadataR
     } else if (url.includes('goodreads.com') || (url.includes('amazon.com') && (url.includes('/dp/') || url.includes('/product/'))) || url.includes('books.google.com')) {
       metadata = await extractBookMetadata(url);
     } else {
-      metadata = await extractGenericMetadata(url, generateScreenshot);
+      metadata = await extractGenericMetadata(url);
     }
 
     // Clean up the data

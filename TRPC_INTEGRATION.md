@@ -27,10 +27,7 @@ Successfully integrated tRPC with the database-backed system, replacing the old 
 - **Real-time updates**: Mutations automatically invalidate and refetch data
 
 ### 4. ✅ UI Enhancements
-- **Add Content Form**: Created `src/components/AddContentForm.tsx` with full form functionality
-- **Modal integration**: Wired up "Add Content" buttons to open the modal
-- **Form validation**: Required fields, URL validation, content type selection
-- **Loading states**: Proper loading and error handling
+Initial UI work added dynamic content cards and filtering. Upload capabilities were later removed for the public version.
 
 ### 5. ✅ Cleanup
 - **Removed mock data**: Deleted old `src/data/mockContent.ts` and `src/data/mockContent.json`
