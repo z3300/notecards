@@ -49,7 +49,9 @@ export default function Dashboard() {
     reddit: '💬',
     twitter: '🐦',
     spotify: '🎵',
-    soundcloud: '☁️'
+    soundcloud: '☁️',
+    movie: '🎬',
+    book: '📚'
   };
   
   // Apply both search and type filtering

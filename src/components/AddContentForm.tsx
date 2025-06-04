@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/utils/trpc';
 import { ContentType } from '@prisma/client';
 
@@ -9,27 +9,34 @@ interface AddContentFormProps {
   onClose: () => void;
 }
 
+interface MetadataResponseData {
+  type: string;
+  title: string;
+  author?: string;
+  thumbnailUrl?: string;
+  duration?: string;
+  description?: string;
+  // Allow any other properties for full metadata
+  [key: string]: any;
+}
+
 interface MetadataResponse {
   success: boolean;
-  data?: {
-    type: string;
-    title: string;
-    author?: string;
-    thumbnailUrl?: string;
-    duration?: string;
-    description?: string;
-  };
+  data?: MetadataResponseData;
   error?: string;
 }
 
 export default function AddContentForm({ isOpen, onClose }: AddContentFormProps) {
-  const [step, setStep] = useState<'url' | 'form'>('url');
+  const [step, setStep] = useState<'url' | 'form' | 'screenshotPrompt' | 'screenshotView'>('url');
   const [urlInput, setUrlInput] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
-  const [wantScreenshot, setWantScreenshot] = useState(true);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
   
+  const [metadataApiResponse, setMetadataApiResponse] = useState<MetadataResponseData | null>(null);
+  const [isGeneratingScreenshot, setIsGeneratingScreenshot] = useState(false);
+  const [generatedScreenshotUrl, setGeneratedScreenshotUrl] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     type: 'article' as ContentType,
     url: '',
@@ -54,8 +61,10 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
     setStep('url');
     setUrlInput('');
     setExtractionError(null);
-    setWantScreenshot(true);
     setScreenshotError(null);
+    setMetadataApiResponse(null);
+    setIsGeneratingScreenshot(false);
+    setGeneratedScreenshotUrl(null);
     setFormData({
       type: 'article' as ContentType,
       url: '',
@@ -74,6 +83,8 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
     setIsExtracting(true);
     setExtractionError(null);
     setScreenshotError(null);
+    setGeneratedScreenshotUrl(null);
+    setMetadataApiResponse(null);
     
     try {
       const response = await fetch('/api/extract-metadata', {
@@ -83,42 +94,14 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
         },
         body: JSON.stringify({ 
           url: urlInput.trim(),
-          generateScreenshot: wantScreenshot // Pass the screenshot preference
         }),
       });
       
       const result: MetadataResponse = await response.json();
+      setMetadataApiResponse(result.data || null);
       
       if (result.success && result.data) {
-        let thumbnailUrl = result.data.thumbnailUrl || '';
-        
-        // If user wanted a screenshot but didn't get one for an article, try to generate one separately
-        if (wantScreenshot && result.data.type === 'article' && !thumbnailUrl) {
-          try {
-            const screenshotResponse = await fetch('/api/generate-screenshot', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ url: urlInput.trim() }),
-            });
-            
-            if (screenshotResponse.ok) {
-              const screenshotData = await screenshotResponse.json();
-              if (screenshotData.success && screenshotData.screenshotPath) {
-                thumbnailUrl = screenshotData.screenshotPath;
-              } else {
-                setScreenshotError('Failed to generate screenshot, but you can still proceed.');
-              }
-            } else {
-              setScreenshotError('Screenshot service unavailable, but you can still proceed.');
-            }
-          } catch (error) {
-            setScreenshotError('Failed to generate screenshot, but you can still proceed.');
-          }
-        }
-
-        const newFormData = {
+        const newBaseFormData = {
           type: result.data.type as ContentType,
           url: urlInput.trim(),
           title: result.data.title,
@@ -126,19 +109,81 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
           author: result.data.author || '',
           duration: result.data.duration || '',
           location: '',
-          thumbnail: thumbnailUrl,
+          thumbnail: result.data.thumbnailUrl || '',
         };
-        setFormData(newFormData);
-        setStep('form');
+        setFormData(newBaseFormData);
+
+        if (!result.data.thumbnailUrl && result.data.type === 'article') {
+          setStep('screenshotPrompt');
+        } else {
+          setStep('form');
+        }
       } else {
         setExtractionError(result.error || 'Failed to extract metadata');
+        setStep('url');
       }
     } catch (error) {
       setExtractionError('Failed to extract metadata. Please try again.');
       console.error('Extraction error:', error);
+      setStep('url');
     } finally {
       setIsExtracting(false);
     }
+  };
+
+  const handleProceedToFormWithoutScreenshot = () => {
+    setFormData(prev => ({ ...prev, thumbnail: '' }));
+    setStep('form');
+  };
+
+  const handleGenerateScreenshot = async () => {
+    if (!urlInput.trim() || !metadataApiResponse) return;
+
+    setIsGeneratingScreenshot(true);
+    setScreenshotError(null);
+    try {
+      const response = await fetch('/api/generate-screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: urlInput.trim() }),
+      });
+
+      if (response.ok) {
+        const screenshotData = await response.json();
+        if (screenshotData.success && screenshotData.screenshotPath) {
+          setGeneratedScreenshotUrl(screenshotData.screenshotPath);
+          setStep('screenshotView');
+        } else {
+          setScreenshotError(screenshotData.error || 'Failed to generate screenshot path.');
+          handleProceedToFormWithoutScreenshot(); 
+        }
+      } else {
+        const errorData = await response.json();
+        setScreenshotError(errorData.error || 'Screenshot service unavailable.');
+        handleProceedToFormWithoutScreenshot();
+      }
+    } catch (error) {
+      console.error('Screenshot generation error:', error);
+      setScreenshotError('Client-side error generating screenshot.');
+      handleProceedToFormWithoutScreenshot();
+    } finally {
+      setIsGeneratingScreenshot(false);
+    }
+  };
+
+  const handleKeepScreenshot = () => {
+    if (generatedScreenshotUrl) {
+      setFormData(prev => ({ ...prev, thumbnail: generatedScreenshotUrl }));
+    }
+    setStep('form');
+  };
+
+  const handleDiscardScreenshot = () => {
+    setGeneratedScreenshotUrl(null);
+    setFormData(prev => ({ ...prev, thumbnail: '' }));
+    setStep('form');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -162,6 +207,7 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
 
   const removeScreenshot = () => {
     setFormData(prev => ({ ...prev, thumbnail: '' }));
+    setGeneratedScreenshotUrl(null);
     setScreenshotError(null);
   };
 
@@ -178,7 +224,10 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              {step === 'url' ? 'Paste Content URL' : 'Add New Content'}
+              {step === 'url' && 'Paste Content URL'}
+              {step === 'screenshotPrompt' && 'Generate Thumbnail?'}
+              {step === 'screenshotView' && 'Review Screenshot'}
+              {step === 'form' && 'Add New Content'}
             </h2>
             <button
               onClick={() => { onClose(); resetForm(); }}
@@ -207,20 +256,6 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
                 />
               </div>
 
-              {/* Screenshot checkbox */}
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="wantScreenshot"
-                  checked={wantScreenshot}
-                  onChange={(e) => setWantScreenshot(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                />
-                <label htmlFor="wantScreenshot" className="text-sm font-medium text-gray-700">
-                  Generate screenshot for articles
-                </label>
-              </div>
-
               {extractionError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                   <p className="text-sm text-red-600">{extractionError}</p>
@@ -243,6 +278,63 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                   {isExtracting ? 'Extracting...' : 'Auto-Fill'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'screenshotPrompt' && (
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-gray-700">
+                We couldn't find a thumbnail for this article.
+                Would you like to generate a screenshot to use as a thumbnail?
+              </p>
+              {isGeneratingScreenshot && <p className="text-sm text-blue-600">Generating screenshot...</p>}
+              {screenshotError && <p className="text-sm text-red-600">{screenshotError}</p>}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleProceedToFormWithoutScreenshot}
+                  disabled={isGeneratingScreenshot}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  No, Continue
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGenerateScreenshot}
+                  disabled={isGeneratingScreenshot}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {isGeneratingScreenshot ? 'Generating...' : 'Yes, Generate'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'screenshotView' && generatedScreenshotUrl && (
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-gray-700 mb-2">Review the generated screenshot:</p>
+              <img 
+                src={generatedScreenshotUrl} 
+                alt="Generated screenshot preview"
+                className="w-full max-w-xs mx-auto h-auto object-contain rounded-md border border-gray-200 mb-4"
+              />
+              {screenshotError && <p className="text-sm text-red-600 py-2">{screenshotError}</p>}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleDiscardScreenshot}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Discard
+                </button>
+                <button
+                  type="button"
+                  onClick={handleKeepScreenshot}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Keep Screenshot
                 </button>
               </div>
             </div>
@@ -362,11 +454,10 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
                 />
               </div>
 
-              {/* Screenshot preview section */}
-              {(formData.thumbnail || screenshotError) && (
+              {(formData.thumbnail || (screenshotError && !generatedScreenshotUrl) ) && formData.type === 'article' && (
                 <div className="border-t pt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Screenshot Preview
+                    {formData.thumbnail ? 'Thumbnail Preview' : 'Screenshot Problem'}
                   </label>
                   
                   {formData.thumbnail && (
@@ -387,7 +478,7 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
                     </div>
                   )}
                   
-                  {screenshotError && !formData.thumbnail && (
+                  {(screenshotError && !formData.thumbnail && !generatedScreenshotUrl) && (
                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
@@ -401,6 +492,14 @@ export default function AddContentForm({ isOpen, onClose }: AddContentFormProps)
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Debug Metadata Display */}
+              {metadataApiResponse && (
+                <div className="mt-6 p-3 bg-gray-50 rounded border border-gray-200 text-xs text-gray-600 overflow-auto max-h-48">
+                  <h4 className="font-semibold text-gray-700 mb-1.5 text-sm">Developer: Raw Metadata</h4>
+                  <pre className="whitespace-pre-wrap break-all">{JSON.stringify(metadataApiResponse, null, 2)}</pre>
                 </div>
               )}
 
