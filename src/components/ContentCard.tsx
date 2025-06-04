@@ -1,42 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
+import { CARD_SIZES } from './cardSizes';
 
-// 🎯 CARD SIZE CONFIGURATION - Easy to adjust!
-// const CARD_SIZES = {
-//   // Card dimensions
-//   height: 'h-80',        // Total card height (320px) - MAIN SIZE CONTROL
-//   embedHeight: 'h-48',   // Embed area height (192px) - About 60% of total
-  
-//   // Spacing & padding
-//   padding: 'p-4',        // Content padding (16px)
-//   paddingBack: 'p-6',    // Back card padding (24px)
-  
-//   // Elements
-//   dotSize: 'w-3 h-3',    // Color dot size (12px)
-  
-//   // Typography (scales with card size)
-//   titleText: 'text-sm',     // Title font size
-//   metaText: 'text-xs',      // Meta info font size
-//   iconText: 'text-3xl',     // Content type icons
-//   noteTitle: 'text-lg',     // Notes title on back
-//   noteText: 'text-sm',      // Notes content
-  
-//   // Spacing
-//   titleMargin: 'mb-2',      // Title bottom margin
-//   iconMargin: 'mb-2',       // Icon bottom margin
-//   noteMargin: 'mb-4',       // Notes title margin
-// } as const;
-
-// 🔧 Quick size presets - uncomment one to use
-// Small cards:
-// const CARD_SIZES = { height: 'h-64', embedHeight: 'h-32', padding: 'p-3', paddingBack: 'p-4', dotSize: 'w-2 h-2', titleText: 'text-xs', metaText: 'text-xs', iconText: 'text-2xl', noteTitle: 'text-base', noteText: 'text-xs', titleMargin: 'mb-1', iconMargin: 'mb-1', noteMargin: 'mb-3' };
-
-// Large cards:
- const CARD_SIZES = { height: 'h-96', embedHeight: 'h-56', padding: 'p-5', paddingBack: 'p-8', dotSize: 'w-4 h-4', titleText: 'text-base', metaText: 'text-sm', iconText: 'text-4xl', noteTitle: 'text-xl', noteText: 'text-base', titleMargin: 'mb-3', iconMargin: 'mb-3', noteMargin: 'mb-6' };
-
-// Extra Large cards:
-// const CARD_SIZES = { height: 'h-[28rem]', embedHeight: 'h-64', padding: 'p-6', paddingBack: 'p-10', dotSize: 'w-5 h-5', titleText: 'text-lg', metaText: 'text-base', iconText: 'text-5xl', noteTitle: 'text-2xl', noteText: 'text-lg', titleMargin: 'mb-4', iconMargin: 'mb-4', noteMargin: 'mb-8' };
 
 export interface ContentItem {
   id: string;

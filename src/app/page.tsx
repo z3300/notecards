@@ -1,10 +1,15 @@
 "use client";
 
-import ContentCard from '@/components/ContentCard';
-import AddContentForm from '@/components/AddContentForm';
-import { trpc } from '@/utils/trpc';
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import AddContentForm from '@/components/AddContentForm';
+import ContentCardSkeleton from '@/components/ContentCardSkeleton';
+import { trpc } from '@/utils/trpc';
+
+const ContentCard = dynamic(() => import('@/components/ContentCard'), {
+  loading: () => <ContentCardSkeleton />,
+});
 
 export default function Dashboard() {
   const { data: items = [], isLoading } = trpc.content.getAll.useQuery();
@@ -12,8 +17,6 @@ export default function Dashboard() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-
-  if (isLoading) return <div className="text-center py-16">Loading...</div>;
   
   // Sort content by date (newest first)
   const sortedContent = [...items].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -182,11 +185,15 @@ export default function Dashboard() {
             transition={{ duration: 0.3 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
           >
-            {filteredContent.map((content) => (
-              <motion.div key={content.id} layout>
-                <ContentCard content={content} />
-              </motion.div>
-            ))}
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, i) => (
+                  <ContentCardSkeleton key={i} />
+                ))
+              : filteredContent.map((content) => (
+                  <motion.div key={content.id} layout>
+                    <ContentCard content={content} />
+                  </motion.div>
+                ))}
           </motion.div>
         </AnimatePresence>
 
